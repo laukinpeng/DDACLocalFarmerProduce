@@ -6,6 +6,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore; //sql actions
+using Microsoft.Extensions.DependencyInjection; //extenstion
+using DDACLocalFarmerProduce.Data; //data link
+using DDACLocalFarmerProduce.Models; //link to seeddata class
 
 namespace DDACLocalFarmerProduce
 {
@@ -13,7 +17,24 @@ namespace DDACLocalFarmerProduce
     {
         public static void Main(string[] args)
         {
-            CreateHostBuilder(args).Build().Run();
+            var host = CreateHostBuilder(args).Build();
+            //link with my initialize() methos in seeddata.cs
+            using (var scope = host.Services.CreateScope())
+            {
+                var services = scope.ServiceProvider;
+                try
+                {
+                    var context = services.GetRequiredService<DDACProductContext>();
+                    context.Database.Migrate();
+                    SeedData.Initialize(services);
+                }
+                catch(Exception ex)
+                {
+                    var logger = services.GetRequiredService<ILogger<Program>>();
+                    logger.LogError(ex, "An error occured while planting the seed");
+                }
+            }
+            host.Run();
         }
 
         public static IHostBuilder CreateHostBuilder(string[] args) =>
